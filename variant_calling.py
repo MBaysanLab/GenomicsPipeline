@@ -10,7 +10,9 @@ class VariantCall(object):
 
     def __init__(self, variant_caller, thrds, map_type, germline_bam, germline_realign, wd):
         self.get_paths = GetPaths()
-        self.working_directory = wd + "/" + map_type
+        self.main_directory = wd
+        self.folder_directory = wd + "/" + map_type
+        self.working_directory = wd + "/" + map_type + "/GatkPreProcess"
         os.chdir(self.working_directory)
         print(self.working_directory)
         self.v_caller = variant_caller
@@ -78,3 +80,11 @@ class VariantCall(object):
         step2 = self.varscan_caller_step2(step1)
         step3 = self.varscan_caller_step3(step2)
         print(step3)
+
+    def create_folder(self, all_files):
+        mk_dir = self.folder_directory + "/" + self.v_caller
+        os.mkdir(mk_dir)
+        for file in all_files:
+            if file[-2:] != "gz":
+                print(file)
+                shutil.move(self.working_directory + "/" + file, mk_dir + "/" + file)    

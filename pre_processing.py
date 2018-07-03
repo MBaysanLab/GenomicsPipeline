@@ -65,7 +65,6 @@ class PreProcessing(object):
 
 
 
-
 if __name__ == "__main__":
     pre_processing_step = PreProcessing(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline Test/test_files",
                            map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="1")
