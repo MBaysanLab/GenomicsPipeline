@@ -1,5 +1,7 @@
 import tkinter as tk
 import mapping
+import pre_processing
+import gatk_pre_processing
 import variant_calling
 from glob import glob
 from os import chdir
@@ -230,22 +232,38 @@ class PipelineGui:
             PipelineGui()
 
     def onMapping(self):
+        try:
+            mt = self.var_maptype.get()
+            st = self.var_sampletype.get()
+            wd = self.working_directory.get()
+            if wd[-1] == "/" or wd[-1] == "\\":
+                wd = wd[:-1]
+            lb = self.library.get()
+            th = self.threads.get()
+            gt = self.var_gatk_tools.get()
+            mapping_step = mapping.Mapping(working_directory=wd, map_type=mt, sample_type=st, library_matching_id=lb,
+                                           thrds=th)
 
-        mt = self.var_maptype.get()
-        st = self.var_sampletype.get()
-        wd = self.working_directory.get()
-        if wd[-1] == "/" or wd[-1] == "\\":
-            wd = wd[:-1]
-        lb = self.library.get()
-        th = self.threads.get()
-        gt = self.var_gatk_tools.get()
-        pipeline1 = mapping.BamPipeline(working_directory=wd, map_type=mt, sample_type=st, library_matching_id=lb,
-                                        thrds=th, gatk_tools=gt)
-        pipeline1_success = pipeline1.run_pipeline()
+            mapping_files = mapping_step.mapping()
+            pre_processing_step = pre_processing.PreProcessing(working_directory=wd, map_type=mt, sample_type=st,
+                                                               library_matching_id=lb, thrds=th)
 
-        return pipeline1_success
+            fastq_list = mapping_step.get_fastq()
+            info_dict = mapping_step.get_info(fastq_list)
+            mark_duplicate_file = pre_processing_step.pre_process(info_dict, mapping_files)
 
-    def onVCaller(self):
+            if gt == "Yes":
+                gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(working_directory=wd, map_type=mt,
+                                                                                 sample_type=st, library_matching_id=lb,
+                                                                                 thrds=th)
+                gatk_pre_processing_step.run_gatks(mark_duplicate_file)
+            #pipeline1_success = pipeline1.run_pipeline()
+
+            return True
+        except:
+            return False
+
+    def onVCaller(self, fromFullPipeline = False):
         wd = self.working_directory.get()
         if wd[-1] == "/" or wd[-1] == "\\":
             wd = wd[:-1]
@@ -255,9 +273,7 @@ class PipelineGui:
         if gm[-1] == "/" or gm[-1] == "\\":
             gm = gm[:-1]
         th = self.threads.get()
-
         chdir(gm + "/" + mt)
-
         gm_bam = glob("OutputBAM_*.bam")
         gm_interval = glob("realign_target.intervals")
         chdir(wd + "/" + mt)
@@ -274,51 +290,23 @@ class PipelineGui:
         return pipeline2_success
 
     def onFull(self):
-        mt = self.var_maptype.get()
         st = self.var_sampletype.get()
-        wd = self.working_directory.get()
-        if wd[-1] == "/" or wd[-1] == "\\":
-            wd = wd[:-1]
-        lb = self.library.get()
-        th = self.threads.get()
-        vc = ""
-        gm = ""
-        gt = self.var_gatk_tools.get()
-        sample_type_check = False
 
         if st == "Germline":
             sample_type_check = False
-
         else:
             sample_type_check = True
-            vc = self.var_variantcaller.get()
-            gm = self.germline.get()
-            if gm[-1] == "/" or gm[-1] == "\\":
-                gm = gm[:-1]
 
         print(sample_type_check)
         if sample_type_check:
-            pipeline1 = mapping.BamPipeline(working_directory=wd, map_type=mt, sample_type=st, library_matching_id=lb,
-                                            thrds=th, gatk_tools=gt)
-            pipeline1_success = pipeline1.run_pipeline()
+            pipeline1_success = self.onMapping()
             if pipeline1_success:
-                chdir(gm + "/" + mt)
-                gm_bam = glob("Completeted_BaseCalibrator_*.bam")
-                gm_interval = glob("realign_target.intervals")
-                chdir(wd + "/" + mt)
-                bam = gm + "/" + mt + "/" + gm_bam[0]
-                interval = gm + "/" + mt + "/" + gm_interval[0]
-                pipeline2 = variant_calling.VariantCall(variant_caller=vc, thrds=th, map_type=mt, germline_bam=bam,
-                                            germline_realign=interval, wd=wd)
-                pipeline2_success = pipeline2.run_pipeline()
+                pipeline2_success = self.onVCaller()
                 return pipeline2_success
             else:
                 return False
         else:
-            print("------------")
-            pipeline1 = mapping.BamPipeline(working_directory=wd, map_type=mt, sample_type=st, library_matching_id=lb,
-                                            thrds=th, gatk_tools=gt)
-            pipeline1_success = pipeline1.run_pipeline()
+            pipeline1_success = self.onMapping()
             return pipeline1_success
 
 
