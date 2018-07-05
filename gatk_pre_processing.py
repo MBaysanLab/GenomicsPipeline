@@ -20,53 +20,60 @@ class GatkPreProcessing(object):
         self.file_list = []
         os.chdir(self.working_directory)
 
+    def create_index(self, lastbam):
+        indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
+        log_command(indexcol, "GATK_Index", self.threads)
+        self.file_list.append(lastbam[:-3] + "bai")
+
     def gatk_realign_target_creator(self, lastbam):
+
         bcal = "java -jar " + self.get_paths.gatk_path + " -T RealignerTargetCreator -nt " + \
                self.threads + " -R " + self.bundle_dir + "/ucsc.hg19.fasta -known " + \
-               self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf -I " + lastbam[0] + \
+               self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf -I " + lastbam + \
                " -o realign_target.intervals"
+        print(bcal)
         log_command(bcal, "GATK_RealignTargetCreator", self.threads)
         self.file_list.append("realign_target.intervals")
 
-    def gatk_indel_realigner(self):
-        bamstr = "*" + self.map_type + "_mdup_removed*.bam"
-        lastbam = glob.glob(bamstr)
-        realigned_last_bam = "IndelRealigned_" + lastbam[0]
+    def gatk_indel_realigner(self, lastbam):
+
+        realigned_last_bam = "GATK_IR_" + lastbam
         bcal = "java -jar " + self.get_paths.gatk_path + " -T IndelRealigner -R " + self.bundle_dir + \
                "/ucsc.hg19.fasta -known " + self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + \
-               " -targetIntervals realign_target.intervals --noOriginalAlignmentTags -I " + lastbam[0] + " -o " + \
+               " -targetIntervals realign_target.intervals --noOriginalAlignmentTags -I " + lastbam + " -o " + \
                realigned_last_bam
 
         log_command(bcal, "GATK_IndelRealigner", self.threads)
         self.file_list.append(realigned_last_bam)
+        return realigned_last_bam
 
-    def gatk_base_recalibrator(self):
-        bamstr = "*IndelRealigned_*.bam"
-        lastbam = glob.glob(bamstr)
-        basequalityscore = str(lastbam[0]).split(".")[0] + "_bqsr.grp"
+    def gatk_base_recalibrator(self, lastbam):
+        basequalityscore = str(lastbam).split(".")[0] + "_bqsr.grp"
         nct = " -nct " + str(self.threads)
         bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T BaseRecalibrator -R " + self.bundle_dir +\
-               "/ucsc.hg19.fasta -I " + lastbam[0] + " -knownSites " + self.bundle_dir +\
+               "/ucsc.hg19.fasta -I " + lastbam + " -knownSites " + self.bundle_dir +\
                "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + " -o " + basequalityscore
         log_command(bcal, "GATK_BaseRecalibrator", self.threads)
         self.file_list.append(basequalityscore)
+        return basequalityscore
 
-    def gatk_print_reads(self):
-        bamstr = "*IndelRealigned_*.bam"
-        lastbam = glob.glob(bamstr)
-        bqsr = glob.glob("*.grp")[0]
+    def gatk_print_reads(self, lastbam, bqsr):
         nct = " -nct " + str(self.threads)
-        aftercalibratorBam = "OutputBAM_" + lastbam[0]
+        samplename = lastbam.split("_")[-2]
+        aftercalibratorBam = "GATK_" + self.map_type + "_" + samplename + ".bam"
         bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T PrintReads -R " + self.bundle_dir + \
-               "/ucsc.hg19.fasta -I " + lastbam[0] + " --BQSR " + bqsr + " -o " + aftercalibratorBam
+               "/ucsc.hg19.fasta -I " + lastbam + " --BQSR " + bqsr + " -o " + aftercalibratorBam
         log_command(bcal, "GATK_PrintReads", self.threads)
         self.file_list.append(aftercalibratorBam)
+        self.create_index(aftercalibratorBam)
+
 
     def run_gatks(self, after_markdpl):
+
         self.gatk_realign_target_creator(after_markdpl)
-        self.gatk_indel_realigner()
-        self.gatk_base_recalibrator()
-        self.gatk_print_reads()
+        realigned_bam = self.gatk_indel_realigner(after_markdpl)
+        basequality = self.gatk_base_recalibrator(realigned_bam)
+        self.gatk_print_reads(realigned_bam, basequality)
         self.create_folder(self.file_list)
         return True
 
@@ -80,9 +87,12 @@ class GatkPreProcessing(object):
 
 
 if __name__ == "__main__":
-    gatk_pre_processing_step = GatkPreProcessing(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline Test/test_files",
-                           map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="1")
+    gatk_pre_processing_step = GatkPreProcessing(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files",
+                           map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="3")
 
-    after_markdpl_file = glob.glob("OutputBAM_*.bam")
+    after_markdpl_file = glob.glob("MDUP_*.bam")[0]
+    print(after_markdpl_file)
+    os.chdir(gatk_pre_processing_step.working_directory)
+    print(os.getcwd())
     gatk_files = gatk_pre_processing_step.run_gatks(after_markdpl_file)
     print(gatk_files)

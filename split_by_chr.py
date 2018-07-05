@@ -29,5 +29,5 @@ def split_bam_by_chr(file):
 
 #get_list = split_bam_by_chr("test_files/NB17_last_Bwa.bam")
 
-print(chr_list)
+
 
