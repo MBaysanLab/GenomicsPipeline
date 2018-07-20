@@ -245,24 +245,40 @@ class PipelineGui:
                                        thrds=th)
 
         mapping_files = mapping_step.mapping()
+        fastq_list = mapping_step.get_fastq()
+        info_dict = mapping_step.get_info(fastq_list)
+        print("---------------------------")
+        print(mapping_files)
         pre_processing_step = pre_processing.PreProcessing(working_directory=wd, map_type=mt, sample_type=st,
                                                            library_matching_id=lb, thrds=th, issplitchr="Before")
 
-        fastq_list = mapping_step.get_fastq()
-        info_dict = mapping_step.get_info(fastq_list)
+        print("---------------------------")
+        print(fastq_list)
+        print(info_dict)
         mark_duplicate_file = pre_processing_step.pre_process(info_dict, mapping_files)
-
+        print(mark_duplicate_file)
+        gatk_file_list = []
         if gt == "Yes":
+            for file in mark_duplicate_file:
+                gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(working_directory=wd, map_type=mt,
+                                                                                 sample_type=st, library_matching_id=lb,
+                                                                                 thrds=th)
+                return_files = gatk_pre_processing_step.run_gatks(file)
+                print(return_files)
+                gatk_file_list.append(return_files)
+                print(gatk_file_list)
+        else:
             gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(working_directory=wd, map_type=mt,
                                                                              sample_type=st, library_matching_id=lb,
                                                                              thrds=th)
             gatk_pre_processing_step.run_gatks(mark_duplicate_file)
-        #pipeline1_success = pipeline1.run_pipeline()
+
 
         return True
 
 
-    def onVCaller(self, fromFullPipeline = False):
+
+    def onVCaller(self):
         wd = self.working_directory.get()
         if wd[-1] == "/" or wd[-1] == "\\":
             wd = wd[:-1]
@@ -273,8 +289,8 @@ class PipelineGui:
             gm = gm[:-1]
         th = self.threads.get()
         chdir(gm + "/" + mt)
-        gm_bam = glob("OutputBAM_*.bam")
-        gm_interval = glob("realign_target.intervals")
+        gm_bam = glob("GATK_PRIR*.bam")
+        gm_interval = glob("*realign_target.intervals")
         chdir(wd + "/" + mt)
         bam = gm + "/" + mt + "/" + gm_bam[0]
         interval = gm + "/" + mt + "/" + gm_interval[0]

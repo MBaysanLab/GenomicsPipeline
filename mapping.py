@@ -10,6 +10,7 @@ import shutil
 class Mapping(object):
 
     def __init__(self, working_directory, map_type, sample_type, library_matching_id, thrds):
+
         self.get_paths = GetPaths()
         if working_directory[-1] == "/" or working_directory[-1] == "\\":
             self.working_directory = working_directory[:-1]
@@ -20,13 +21,16 @@ class Mapping(object):
         self.library_matching_id = library_matching_id
         self.threads = str(thrds)
         self.bundle_dir = self.get_paths.ref_dir + "hg19_bundle"
+        self.file_list = []
         os.chdir(self.working_directory)
 
+    #get fastq files with gziped version in selected folder
     def get_fastq(self):
         all_fastq_files = glob.glob("*fastq.gz")
         split_names_v = [os.path.splitext(os.path.splitext(i)[0])[0] for i in all_fastq_files]
         return split_names_v
 
+    #get information from samples' name such as paired end read, lane
     def get_info(self, fastq_list):
         sample_ID, germline_dna, index_seq, lanes, pairs_r, n_of_seq = (set() for i in range(6))
         if self.sample_type == "Tumor":
@@ -102,17 +106,25 @@ class Mapping(object):
                     return "Please specify the map type Bwa/Bowtie "
 
                 log_command(map_bam, "mapping", self.threads)
-
+                self.file_list.append(gene_origin)
                 self.convert_sort(gene_origin)
 
-        all_bam_files = glob.glob("*.bam")
-        self.create_folder(all_bam_files)
-        return all_bam_files
+        all_sortedbam_files = glob.glob("SortedBAM*.bam")
+        self.create_folder(self.file_list)
+        print(all_sortedbam_files)
+        return all_sortedbam_files
 
     def convert_sort(self, sort_gene_origin):
         convert_sort = "samtools view -@" + self.threads + " -bS " + sort_gene_origin + " | samtools sort -@" + \
                        self.threads + " -o SortedBAM_" + sort_gene_origin
         log_command(convert_sort, "mapping_function;convert_sort_command", self.threads)
+        self.file_list.append("SortedBAM_" + sort_gene_origin)
+        self.create_index("SortedBAM_" + sort_gene_origin)
+
+    def create_index(self, lastbam):
+        indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
+        log_command(indexcol, "Mapping", self.threads)
+        self.file_list.append(lastbam[:-3] + "bai")
 
     def all_bam_files_after_map(self):
         bam_files = glob.glob("SortedBAM*.bam")
@@ -130,7 +142,7 @@ class Mapping(object):
 
 
 if __name__ == "__main__":
-    mapping_step = Mapping(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline Test/test_files",
+    mapping_step = Mapping(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files",
                            map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="1")
     mapping_files = mapping_step.mapping()
     print(mapping_files)
