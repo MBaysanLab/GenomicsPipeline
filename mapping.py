@@ -2,31 +2,35 @@ import os
 import glob
 from log_command import log_command
 from paths import GetPaths
+import re
+import gzip
 import shutil
 
 
-class BamPipeline(object):
+class Mapping(object):
 
-    def __init__(self, working_directory, map_type, sample_type, library_matching_id, thrds, gatk_tools):
+    def __init__(self, working_directory, map_type, sample_type, library_matching_id, thrds):
+
         self.get_paths = GetPaths()
-        self.working_directory = working_directory
+        if working_directory[-1] == "/" or working_directory[-1] == "\\":
+            self.working_directory = working_directory[:-1]
+        else:
+            self.working_directory = working_directory
         self.map_type = map_type
         self.sample_type = sample_type
         self.library_matching_id = library_matching_id
-        self.threads = thrds
+        self.threads = str(thrds)
         self.bundle_dir = self.get_paths.ref_dir + "hg19_bundle"
-        self.gatk_tools = False
-        if gatk_tools == "Yes":
-            self.gatk_tools = True
-        else:
-            self.gatk_tools = False
+        self.file_list = []
         os.chdir(self.working_directory)
 
+    #get fastq files with gziped version in selected folder
     def get_fastq(self):
         all_fastq_files = glob.glob("*fastq.gz")
         split_names_v = [os.path.splitext(os.path.splitext(i)[0])[0] for i in all_fastq_files]
         return split_names_v
 
+    #get information from samples' name such as paired end read, lane
     def get_info(self, fastq_list):
         sample_ID, germline_dna, index_seq, lanes, pairs_r, n_of_seq = (set() for i in range(6))
         if self.sample_type == "Tumor":
@@ -56,10 +60,9 @@ class BamPipeline(object):
         else:
             print("raise error and ask again for a valid sample type")
 
-    def mapping(self, fastq_list, info_dict):
-        import re
-        import gzip
-
+    def mapping(self):
+        fastq_list = self.get_fastq()
+        info_dict = self.get_info(fastq_list)
         RG_SM = info_dict["Sample_ID"][0]
         RG_PL = "Illumina"
         RG_LB = self.library_matching_id
@@ -103,107 +106,43 @@ class BamPipeline(object):
                     return "Please specify the map type Bwa/Bowtie "
 
                 log_command(map_bam, "mapping", self.threads)
-
+                self.file_list.append(gene_origin)
                 self.convert_sort(gene_origin)
 
-    def convert_sort(self, sort_gene_origin):
+        all_sortedbam_files = glob.glob("SortedBAM*.bam")
+        self.create_folder(self.file_list)
+        print(all_sortedbam_files)
+        return all_sortedbam_files
 
+    def convert_sort(self, sort_gene_origin):
         convert_sort = "samtools view -@" + self.threads + " -bS " + sort_gene_origin + " | samtools sort -@" + \
                        self.threads + " -o SortedBAM_" + sort_gene_origin
         log_command(convert_sort, "mapping_function;convert_sort_command", self.threads)
+        self.file_list.append("SortedBAM_" + sort_gene_origin)
+        self.create_index("SortedBAM_" + sort_gene_origin)
 
-    def merge_bams(self, info_dict):
+    def create_index(self, lastbam):
+        indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
+        log_command(indexcol, "Mapping", self.threads)
+        self.file_list.append(lastbam[:-3] + "bai")
 
-        all_bam_files = glob.glob("SortedBAM*")
-        print(all_bam_files)
-        inputs_list = ""
-        for i in all_bam_files:
-            inputs_list = inputs_list + "I=" + i + " "
-        ouput_name = self.map_type + "_" + info_dict["Sample_ID"][0] + "_MergedBAM.bam"
-        merge_command = "java -XX:ParallelGCThreads=" + self.threads + \
-                        " -jar " + self.get_paths.picard_path + " MergeSamFiles " + inputs_list + \
-                        " O=" + ouput_name + " USE_THREADING=true"
+    def all_bam_files_after_map(self):
+        bam_files = glob.glob("SortedBAM*.bam")
+        return bam_files
 
-        log_command(merge_command, "merge_bams", self.threads)
-
-    def mark_duplicate(self):
-        merged_bam = glob.glob("*_MergedBAM.bam")
-        mark_prefix_removed = self.map_type + "_mdup_removed_"
-        output = "OutputBAM_" + mark_prefix_removed + "_" + merged_bam[0]
-        picardcommand = "java -XX:ParallelGCThreads=" + self.threads + \
-                        " -jar " + self.get_paths.picard_path + " MarkDuplicates I=" + merged_bam[0] + \
-                        " O=" + output + " M=marked_dup_metrics.txt REMOVE_DUPLICATES=true CREATE_INDEX=true"
-        log_command(picardcommand, "mark_duplicate", self.threads)
-
-    def gatk_realign_target_creator(self):
-
-        bamstr = "*" + self.map_type + "_mdup_removed*.bam"
-        print(bamstr)
-        lastbam = glob.glob(bamstr)
-        bcal = "java -jar " + self.get_paths.gatk_path + " -T RealignerTargetCreator -nt " + \
-               self.threads + " -R " + self.bundle_dir + "/ucsc.hg19.fasta -known " + \
-               self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf -I " + lastbam[0] + \
-               " -o realign_target.intervals"
-        log_command(bcal, "GATK_RealignTargetCreator", self.threads)
-
-    def gatk_indel_realigner(self):
-        bamstr = "*" + self.map_type + "_mdup_removed*.bam"
-        lastbam = glob.glob(bamstr)
-        realigned_last_bam = "IndelRealigned_" + lastbam[0]
-        bcal = "java -jar " + self.get_paths.gatk_path + " -T IndelRealigner -R " + self.bundle_dir + \
-               "/ucsc.hg19.fasta -known " + self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + \
-               " -targetIntervals realign_target.intervals --noOriginalAlignmentTags -I " + lastbam[0] + " -o " + \
-               realigned_last_bam
-
-        log_command(bcal, "GATK_IndelRealigner", self.threads)
-
-    def gatk_base_recalibrator(self):
-        bamstr = "*IndelRealigned_*.bam"
-        lastbam = glob.glob(bamstr)
-        basequalityscore = str(lastbam[0]).split(".")[0] + "_bqsr.grp"
-        nct = " -nct " + str(self.threads)
-        bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T BaseRecalibrator -R " + self.bundle_dir +\
-               "/ucsc.hg19.fasta -I " + lastbam[0] + " -knownSites " + self.bundle_dir +\
-               "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + " -o " + basequalityscore
-        log_command(bcal, "GATK_BaseRecalibrator", self.threads)
-
-    def gatk_print_reads(self):
-        bamstr = "*IndelRealigned_*.bam"
-        lastbam = glob.glob(bamstr)
-        bqsr = glob.glob("*.grp")[0]
-        nct = " -nct " + str(self.threads)
-        aftercalibratorBam = "OutputBAM_" + lastbam[0]
-        bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T PrintReads -R " + self.bundle_dir + \
-               "/ucsc.hg19.fasta -I " + lastbam[0] + " --BQSR " + bqsr + " -o " + aftercalibratorBam
-        log_command(bcal, "GATK_PrintReads", self.threads)
-
-    def run_gatks(self):
-        self.gatk_realign_target_creator()
-        self.gatk_indel_realigner()
-        self.gatk_base_recalibrator()
-        self.gatk_print_reads()
-
-    def run_pipeline(self):
-
-        fastqs = self.get_fastq()
-        print(fastqs)
-        info = self.get_info(fastqs)
-        print(info)
-        self.mapping(fastqs, info)
-        self.merge_bams(info)
-        self.mark_duplicate()
-        if self.gatk_tools:
-            self.run_gatks()
-        self.create_folder()
-
-        return True
-
-    def create_folder(self):
-
+    def create_folder(self, all_files):
         mk_dir = self.working_directory + "/" + self.map_type
         os.mkdir(mk_dir)
-        all_files = glob.glob("*.*")
+        mk_dir += "/Mapping"
+        os.mkdir(mk_dir)
         for file in all_files:
             if file[-2:] != "gz":
                 print(file)
                 shutil.move(self.working_directory + "/" + file, mk_dir + "/" + file)
+
+
+if __name__ == "__main__":
+    mapping_step = Mapping(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files",
+                           map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="1")
+    mapping_files = mapping_step.mapping()
+    print(mapping_files)

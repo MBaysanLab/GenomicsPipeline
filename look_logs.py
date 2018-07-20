@@ -63,3 +63,10 @@ class ReadLogs(object):
         ax.set(xlim=(0 ,1200), ylabel="Function that run" ,xlabel="Cost of functions")
         sns.despine(left=True, bottom=True)
         return ax
+
+
+if __name__ == "main":
+    one_log = ReadLogs("/home/bioinformaticslab/Desktop/AMBRY/Sample_NOB01_GermlineDNA/log_file.txt")
+    df_grouped, k = one_log.read_log_file()
+    print(df_grouped)
+    print(k)
