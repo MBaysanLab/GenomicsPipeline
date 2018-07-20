@@ -93,7 +93,7 @@ class Mapping(object):
                     map_bam = "bwa mem -t " + self.threads + " " + add_read_group + self.get_paths.ref_dir + \
                               "Bwa/ucsc.hg19.fasta " + read1[0] + " " + read2[0] + \
                               " | samtools view -@" + self.threads + " -bS - > " + gene_origin
-                    print(map_bam)
+                    print("mapping" + map_bam)
                 elif self.map_type == "Bowtie2":
 
                     add_read_group = " --rg-id " + RG_ID + " --rg SM:" + RG_SM + " --rg LB:" + RG_LB + " --rg PL:" + \
@@ -105,25 +105,26 @@ class Mapping(object):
                 else:
                     return "Please specify the map type Bwa/Bowtie "
 
-                log_command(map_bam, "mapping", self.threads)
+                log_command(map_bam, "Mapping", self.threads, "Mapping")
                 self.file_list.append(gene_origin)
                 self.convert_sort(gene_origin)
 
         all_sortedbam_files = glob.glob("SortedBAM*.bam")
         self.create_folder(self.file_list)
+        print("print sorted all bam files ")
         print(all_sortedbam_files)
         return all_sortedbam_files
 
     def convert_sort(self, sort_gene_origin):
         convert_sort = "samtools view -@" + self.threads + " -bS " + sort_gene_origin + " | samtools sort -@" + \
                        self.threads + " -o SortedBAM_" + sort_gene_origin
-        log_command(convert_sort, "mapping_function;convert_sort_command", self.threads)
+        log_command(convert_sort, "Convert Sort", self.threads, "Mapping")
         self.file_list.append("SortedBAM_" + sort_gene_origin)
         self.create_index("SortedBAM_" + sort_gene_origin)
 
     def create_index(self, lastbam):
         indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
-        log_command(indexcol, "Mapping", self.threads)
+        log_command(indexcol, "Create Index", self.threads, "Mapping")
         self.file_list.append(lastbam[:-3] + "bai")
 
     def all_bam_files_after_map(self):
@@ -131,13 +132,14 @@ class Mapping(object):
         return bam_files
 
     def create_folder(self, all_files):
+        all_files.append("log_file.txt")
         mk_dir = self.working_directory + "/" + self.map_type
         os.mkdir(mk_dir)
         mk_dir += "/Mapping"
         os.mkdir(mk_dir)
         for file in all_files:
             if file[-2:] != "gz":
-                print(file)
+                print("mapping crate folder print " + file)
                 shutil.move(self.working_directory + "/" + file, mk_dir + "/" + file)
 
 

@@ -22,7 +22,7 @@ class GatkPreProcessing(object):
 
     def create_index(self, lastbam):
         indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
-        log_command(indexcol, "GATK_Index", self.threads)
+        log_command(indexcol, "Create Index", self.threads, "GatkPreProcessing")
         self.file_list.append(lastbam[:-3] + "bai")
 
     def gatk_realign_target_creator(self, lastbam):
@@ -32,7 +32,7 @@ class GatkPreProcessing(object):
                self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf -I " + lastbam + \
                " -o " + realign_target
         print(bcal)
-        log_command(bcal, "GATK_RealignTargetCreator", self.threads)
+        log_command(bcal, "Realign Target Creator", self.threads, "GatkPreProcessing")
         self.file_list.append(realign_target)
         return realign_target
 
@@ -44,7 +44,7 @@ class GatkPreProcessing(object):
                " -targetIntervals " + realign_target + " --noOriginalAlignmentTags -I " + lastbam + " -o " + \
                realigned_last_bam
 
-        log_command(bcal, "GATK_IndelRealigner", self.threads)
+        log_command(bcal, "Indel Realigner", self.threads, "GatkPreProcessing")
         self.file_list.append(realigned_last_bam)
         return realigned_last_bam
 
@@ -54,7 +54,7 @@ class GatkPreProcessing(object):
         bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T BaseRecalibrator -R " + self.bundle_dir +\
                "/ucsc.hg19.fasta -I " + lastbam + " -knownSites " + self.bundle_dir +\
                "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + " -o " + basequalityscore
-        log_command(bcal, "GATK_BaseRecalibrator", self.threads)
+        log_command(bcal, "Base Recalibrator", self.threads, "GatkPreProcessing")
         self.file_list.append(basequalityscore)
         return basequalityscore
 
@@ -64,7 +64,7 @@ class GatkPreProcessing(object):
         aftercalibratorBam = "GATK_PR" + lastbam
         bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T PrintReads -R " + self.bundle_dir + \
                "/ucsc.hg19.fasta -I " + lastbam + " --BQSR " + bqsr + " -o " + aftercalibratorBam
-        log_command(bcal, "GATK_PrintReads", self.threads)
+        log_command(bcal, "Print Reads", self.threads, "GatkPreProcessing")
         self.file_list.append(aftercalibratorBam)
         self.create_index(aftercalibratorBam)
 
@@ -80,6 +80,7 @@ class GatkPreProcessing(object):
         return gatk_files
 
     def create_folder(self, all_files):
+        all_files.append("log_file.txt")
         mk_dir = self.folder_directory + "/GatkPreProcess"
         os.mkdir(mk_dir)
         for file in all_files:
