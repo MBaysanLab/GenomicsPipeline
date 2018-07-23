@@ -2,33 +2,35 @@ from datetime import datetime
 import os
 
 class log_command(object):
-    def __init__(self, command, from_function, th):
+    def __init__(self, command, from_function, th, function_class):
         self.command = command
         self.from_function = from_function
         self.th = th
         self.logs = {'function': "", 'command': "", 'start_time': "", 'end_time': "", 'threads': "", 'success': 0}
+        self.f_class = function_class
+        self.log = ""
         self.system_command_send()
 
     def system_command_send(self):
-        self.logs["function"] = self.from_function
-        self.logs["command"] = self.command
-        self.logs["start_time"] = str(datetime.now())
-        self.logs["threads"] = self.th
+        self.log = self.f_class + ","
+        self.log += self.from_function + ","
+        self.log += self.th + ","
+        self.log += str(datetime.now()) + ","
 
         try:
             os.system(self.command)
-            self.logs["end_time"] = str(datetime.now())
-            self.logs["success"] = 1
-            self.write_logs(self.logs)
+            self.log += str(datetime.now()) + ","
+            self.log += "success,"
+            self.log += self.command + "\n"
+            self.write_logs(self.log)
 
         except:
-            self.logs["end_time"] = str(datetime.now())
-            self.logs["success"] = 0
-            self.write_logs(self.logs)
+            self.log += str(datetime.now()) + ","
+            self.log += "failed,"
+            self.log += self.command + "\n"
+            self.write_logs(self.log)
             return self.from_function + " give error with this command -> " + self.command
 
     def write_logs(self, log):
-        import json
         with open('log_file.txt', 'a') as file:
-            file.write(json.dumps(log))
-            file.write(",")
+            file.write(log)
