@@ -6,7 +6,7 @@ Genomic Pipeline is a software used for analyzing DNA sequence data.
 
  Our pipeline provides multiple algorithms for every step of sequencing analyses and allows user to compare these alternative algorithms by intermediary outputs. It starts from a raw FASTQ file (which is the text file produced by sequencing machines) and ends with a VCF and TXT files (detailed files of discovered SNPs/Indels). It includes different types of mapping, pre-processing (such as GATK Best Practices), variant calling and variant annotation algorithms. A very brief workflow of our basic pipeline can be seen in below figure. 
 
-![workflow diagram 2 -page-3](https://user-images.githubusercontent.com/23744726/41977737-c54f42bc-7a28-11e8-86da-f8e62531bbd2.jpg)
+![workflow diagram 2 -page-3](images/workflow.jpg)
 
 
 ## Getting Started
