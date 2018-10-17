@@ -35,13 +35,13 @@ class ReadLogs(object):
         a = len(df1['function'])
         df1['m'] = range(0, a, 1)
         df1["diff_seconds"] = df1["diff"].apply(lambda row: row.total_seconds())
-        a = df1.groupby("function")[["start_time", "end_time", "diff", "m", "diff_seconds", "threads"]]\
+        a = df1.groupby("class")[["start_time", "end_time", "diff", "m", "diff_seconds", "threads"]]\
             .agg({"threads": "min", "m": "min", 'start_time': 'min', 'end_time': "max", "diff": "sum",
                   "diff_seconds": "sum"}).sort_values("m")
         a["diff_minutes"] = a["diff"].apply(lambda row: divmod(row.total_seconds(), 60)[0])
         return a
 
-    def give_bar_plot(self, df):
+    def give_bar_plot(self, df, x_len=1200):
         import seaborn as sns
         import matplotlib.pyplot as plt
 
@@ -51,13 +51,13 @@ class ReadLogs(object):
         f, ax = plt.subplots(figsize=(6, 15))
         b = df.reset_index()
         sns.set_color_codes("pastel")
-        sns.barplot(x="cum_sum", y="function", data=b,
+        sns.barplot(x="cum_sum", y="class", data=b,
                     label="Total", color="b")
         sns.set_color_codes("muted")
-        sns.barplot(x="diff_minutes", y="function", data=b,
+        sns.barplot(x="diff_minutes", y="class", data=b,
                     label="Minutes of that function", color="b")
         ax.legend(ncol=2, loc="upper right", frameon=True)
-        ax.set(xlim=(0, 1200), ylabel="Function that run", xlabel="Cost of functions")
+        ax.set(xlim=(0, x_len), ylabel="Function that run", xlabel="Cost of functions")
         sns.despine(left=True, bottom=True)
         return ax
 

@@ -9,7 +9,7 @@ import shutil
 
 class VariantCall(object):
 
-    def __init__(self, variant_caller, thrds, map_type, germline_bam, germline_interval, wd, tumor_bam, tumor_interval):
+    def __init__(self, variant_caller, thrds, map_type, germline_bam, germline_interval, wd, tumor_bam, tumor_interval, sample_name):
         self.get_paths = GetPaths()
         self.working_directory = wd
         # self.folder_directory = wd + "/" + map_type
@@ -17,6 +17,7 @@ class VariantCall(object):
         os.chdir(self.working_directory)
         print(self.working_directory)
         self.v_caller = variant_caller
+        self.output_name = self.v_caller + "_" + sample_name
         self.threads = str(thrds)
         self.map_type = map_type
         self.ref_dir = self.get_paths.ref_dir + "hg19_bundle/ucsc.hg19.fasta"
@@ -26,7 +27,7 @@ class VariantCall(object):
             self.tumor_interval = tumor_interval
             self.germline_interval = germline_interval
             self.realign_target = self.tumor_interval + " " + self.germline_interval
-        self.output_vcf = variant_caller + "_ouput.vcf"
+
 
     def run_pipeline(self):
         if self.v_caller == "Mutect2":
@@ -42,49 +43,43 @@ class VariantCall(object):
         return True
 
     def mutect_caller(self):
+        mutect_output = self.working_directory + "/" + self.output_name
         nct = " -nct " + self.threads
         command = "java -jar " + self.get_paths.gatk_path + " -T MuTect2 " + nct + " -R " + self.ref_dir + \
                   " -I:tumor " + self.tumor_bam + " -I:normal " + self.germline_bam + \
                   " --dbsnp " + self.get_paths.dbsnp + " --cosmic " + self.get_paths.cosmic + \
-                  " -L " + self.tumor_interval + " -L " + self.germline_interval + " -o " + self.output_vcf
+                   " -o " + mutect_output
         print(command)
         log_command(command, "Mutect2", self.threads, "Variant Calling")
 
     def varscan_caller_step1(self):
-        command = "samtools mpileup -f " + self.ref_dir + " -q 1 -B " + self.tumor_bam + " " + \
-                  self.germline_bam + " > intermediate_mpileup.pileup"
-        print(command)
-        log_command(command, "Varscan Step 1", self.threads, "Variant Calling")
-        intermediate_mpileup = glob.glob("intermediate_mpileup.pileup")
 
-        return intermediate_mpileup[0]
-
-    def varscan_caller_step2(self, intermediate_mpileup):
-        cwd = os.getcwd()
-        cwd += "/output.basename"
-        command = "java -jar " + self.get_paths.varscan_path + " somatic " + intermediate_mpileup + " " + cwd + \
+        snp_output = self.working_directory + "/SNP_" + self.output_name
+        indel_output = self.working_directory + "/INDEL_" + self.output_name
+        command = "samtools mpileup -f " + self.ref_dir + " -q 1 -B " + self.germline_bam + " " + \
+                  self.tumor_bam + " | java -jar " + self.get_paths.varscan_path + " somatic --output-snp " \
+                  + snp_output + " --output-indel " + indel_output + \
                   " --mpileup 1 --min-coverage 8 --min-coverage-normal 8 --min-coverage-tumor 6 --min-var-freq 0.10 " \
                   "--min-freq-for-hom 0.75 --normal-purity 1.0 --tumor-purity 1.00 --p-value 0.99 " \
                   "--somatic-p-value 0.05 " + "--strand-filter 0 --output-vcf"
         print(command)
-        log_command(command, "Varscan Step 2", self.threads, "Variant Calling")
-        intermediate_varscan_somatic = glob.glob("output.basename*")
+        log_command(command, "Varscan Step Pileup", self.threads, "Variant Calling")
+        intermediate_varscan_somatic = glob.glob("*" + self.output_name + "*vcf*")
 
         return intermediate_varscan_somatic
 
-    def varscan_caller_step3(self, intermediate_varscan_somatic):
+    def varscan_caller_step2(self, intermediate_varscan_somatic):
         print(intermediate_varscan_somatic)
         for somatic in intermediate_varscan_somatic:
             command = "java -jar " + self.get_paths.varscan_path + " processSomatic " + somatic + \
                       " --min-tumor-freq 0.10 --max-normal-freq 0.05 --p-value 0.07"
-            log_command(command, "Varscan Step 3", self.threads, "Variant Calling")
-        return glob.glob("output.basename*")
+            log_command(command, "Varscan Step Process Somatic", self.threads, "Variant Calling")
+        return glob.glob("*vcf*")
 
     def varscan_caller(self):
         step1 = self.varscan_caller_step1()
         step2 = self.varscan_caller_step2(step1)
-        step3 = self.varscan_caller_step3(step2)
-        print(step3)
+        print(step2)
 
     def create_folder(self, all_files):
         up_dir = str(self.working_directory).split("/")[:-1]
@@ -100,10 +95,10 @@ class VariantCall(object):
 
 #variant_caller, thrds, map_type, germline_bam, germline_interval, wd, tumor_bam, tumor_interval
 if __name__ == "__main__":
-    mutectvcf = VariantCall(variant_caller="Mutect2", thrds=6, map_type="Bwa",
-                            germline_bam="/home/bioinformaticslab/Desktop/AMBRY/Sample_NOB01_GermlineDNA/Bwa_mapped/OutputBAM_NOB01_last_Bwa.bam",
-                            germline_interval="/home/bioinformaticslab/Desktop/AMBRY/Sample_NOB01_GermlineDNA/Bwa_mapped/realign_target.intervals",
-                            wd="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files/Bwa_test1/GatkPreProcess",
-                            tumor_bam="Output_GATK_Bwa_NB17.bam",
-                            tumor_interval="realign_target.intervals")
+    mutectvcf = VariantCall(variant_caller="Varscan", thrds=6, map_type="Bwa",
+                            germline_bam="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_46/Bwa/PreProcess/GATK_PRIR_MDUP_Bwa_46_MergedBAM.bam",
+                            germline_interval="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_46/Bwa/PreProcess/MDUP_Bwa_46_MergedBAM_realign_target.intervals",
+                            wd="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_47/Bwa/PreProcess",
+                            tumor_bam="GATK_PRIR_MDUP_Bwa_47_MergedBAM.bam",
+                            tumor_interval="MDUP_Bwa_47_MergedBAM_realign_target.intervals")
     mutectvcf.run_pipeline()
