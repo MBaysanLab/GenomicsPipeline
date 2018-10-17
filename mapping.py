@@ -9,6 +9,38 @@ import shutil
 
 class Mapping(object):
 
+    """
+                This class basically contain 1 main function and 2  complementary function 2 helper function. Main purpose
+                of this class is aligning raw fastq file data according to reference genome and create mapped bam file.
+
+                This file will be in process in sorting and indexing functions and return Sorted and Indexed files
+                with .bam and .bai extensions.
+
+                There is also 2 helper functions in order to get files and information for files.
+
+                Attributes
+                ----------
+                working_directory : str
+                    file path which contains .fastq.gz files.
+                map_type : str
+                    option for mapping algorithm, BWA or Bowtie2
+                sample_type : str
+                    type of sample, Tumor or Germline(Normal)
+                library_matching_id : str
+                    id of patient who has got sample
+                thrds : int
+                    number of core that wanted to use
+
+                Methods
+                -------
+                get_fastq():
+                    Get fastq files inside working directory and return it as list
+                get_info(fastq_list):
+                    Get information from sample file and return a information form in dictionary
+                mapping():
+                    Map fastq files according to reference genome and return bam files
+                """
+
     def __init__(self, working_directory, map_type, sample_type, library_matching_id, thrds):
 
         self.get_paths = GetPaths()
@@ -126,10 +158,6 @@ class Mapping(object):
         indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
         log_command(indexcol, "Create Index", self.threads, "Mapping")
         self.file_list.append(lastbam[:-3] + "bai")
-
-    def all_bam_files_after_map(self):
-        bam_files = glob.glob("SortedBAM*.bam")
-        return bam_files
 
     def create_folder(self, all_files):
         all_files.append("log_file.txt")
