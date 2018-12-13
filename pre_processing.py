@@ -3,6 +3,7 @@ import glob
 from log_command import log_command
 from paths import GetPaths
 import mapping
+import helpers
 from split_by_chr import split_bam_by_chr, get_bam_by_chr
 import shutil
 
@@ -25,7 +26,7 @@ class PreProcessing(object):
 
     def merge_bams(self, info_dict, all_bam_files):
         print("preprocess merge bams ")
-        print( all_bam_files)
+        print(all_bam_files)
         inputs_list = ""
 
         if self.split_chr == "Before":
@@ -51,19 +52,6 @@ class PreProcessing(object):
 
             log_command(merge_command, "Merge Bams", self.threads, "PreProcessing")
             return ouput_name
-
-
-    #
-    # def mark_duplicate(self, merged_bam):
-    #     mark_prefix_removed = "MDUP"
-    #     output = mark_prefix_removed + "_" + merged_bam
-    #
-    #     picardcommand = "java -XX:ParallelGCThreads=" + self.threads + \
-    #                     " -jar " + self.get_paths.picard_path + " MarkDuplicates I=" + merged_bam + \
-    #                     " O=" + output + " M=marked_dup_metrics.txt REMOVE_DUPLICATES=true CREATE_INDEX=true"
-    #     log_command(picardcommand, "Mark Duplicate", self.threads, "PreProcessing")
-    #     self.file_list.append("marked_dup_metrics.txt")
-    #     return output
 
     def mark_duplicate(self, merged_bam, chr):
 
@@ -101,33 +89,23 @@ class PreProcessing(object):
             self.file_list.append("marked_dup_metrics.txt")
             return output
 
-    def create_index(self, lastbam):
-        indexcol = "java -jar " + self.get_paths.picard_path + " BuildBamIndex I=" + lastbam
-        log_command(indexcol, "Create Index", self.threads, "PreProcessing")
-        self.file_list.append(lastbam[:-3] + "bai")
-
-    def create_folder(self, all_files):
-        all_files.append("log_file.txt")
-        mk_dir = self.folder_directory + "/PreProcess"
-        os.mkdir(mk_dir)
-        for file in all_files:
-            if file[-2:] != "gz":
-                print("preprocess crate folder print " +file)
-                shutil.move(self.working_directory + "/" + file, mk_dir + "/" + file)
-
     def pre_process(self, info_dict, all_bam_files):
         if self.split_chr == "After":
             merged_file = self.merge_bams(info_dict, all_bam_files)
             self.file_list.append(merged_file)
-            self.create_index(merged_file)
+            indexed = helpers.create_index(merged_file, "Create Index by Merge", self.threads, "Pre Processing")
+            self.file_list.append(indexed)
             splitted_files = split_bam_by_chr(merged_file)
             for splitted_file in splitted_files:
                 index_start = splitted_file.find("_Chr_")
                 chr_a = splitted_file[index_start:]
                 mark_duplicate_file = self.mark_duplicate(splitted_file, chr_a)
                 self.file_list.append(mark_duplicate_file)
-                self.create_index(mark_duplicate_file)
-            self.create_folder(self.file_list)
+                indexed = helpers.create_index(mark_duplicate_file, "Create Index by MarkDuplicate", self.threads,
+                                     "Pre Processing")
+                self.file_list.append(indexed)
+            helpers.create_folder(self.working_directory, self.file_list, map_type=self.map_type, step="PreProcess",
+                                  folder_directory=self.folder_directory)
             return_files = [a for a in self.file_list if "MDUP" in a and "bam" in a]
             return return_files
 
@@ -140,27 +118,35 @@ class PreProcessing(object):
             for i in all_chr_files:
                 merged_file = self.merge_bams(info_dict, all_chr_files[i])
                 self.file_list.append(merged_file)
-                self.create_index(merged_file)
+                indexed = helpers.create_index(merged_file, "Create Index by Merge", self.threads, "Pre Processing")
+                self.file_list.append(indexed)
                 index_start = all_chr_files[i][0].find("_Chr_")
                 chr_a = all_chr_files[i][0][index_start:]
                 mark_duplicate_file = self.mark_duplicate(merged_file, chr_a)
                 self.file_list.append(mark_duplicate_file)
-                self.create_index(mark_duplicate_file)
-            self.create_folder(self.file_list)
+                indexed = helpers.create_index(mark_duplicate_file, "Create Index by MarkDuplicate", self.threads,
+                                     "Pre Processing")
+                self.file_list.append(indexed)
+                helpers.create_folder(self.working_directory, self.file_list, map_type=self.map_type, step="PreProcess",
+                                   folder_directory=self.folder_directory)
             return_files = [a for a in self.file_list if "MDUP" in a and "bam" in a]
             return return_files
 
         # self.split_chr == "No":
         else:
             merged_file = self.merge_bams(info_dict, all_bam_files)
-            self.create_index(merged_file)
+            indexed = helpers.create_index(merged_file, "Create Index by Merge", self.threads, "Pre Processing")
             self.file_list.append(merged_file)
+            self.file_list.append(indexed)
             mark_duplicate_file = self.mark_duplicate(merged_file,"")
             print("preprocess mark duplicate file " )
             print(mark_duplicate_file)
             self.file_list.append(mark_duplicate_file)
-            self.create_index(mark_duplicate_file)
-            self.create_folder(self.file_list)
+            indexed = helpers.create_index(mark_duplicate_file, "Create Index by MarkDuplicate", self.threads,
+                                 "Pre Processing")
+            self.file_list.append(indexed)
+            helpers.create_folder(self.working_directory, self.file_list, map_type=self.map_type, step="PreProcess",
+                                  folder_directory=self.folder_directory)
             return mark_duplicate_file
 
 
