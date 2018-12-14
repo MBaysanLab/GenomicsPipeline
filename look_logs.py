@@ -61,11 +61,3 @@ class ReadLogs(object):
         sns.despine(left=True, bottom=True)
         return ax
 
-
-if __name__ == "__main__":
-    one_log = ReadLogs("/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files/Bwa/PreProcess/log_file.txt")
-    #df = pd.DataFrame.read_csv(one_log.log_file, header=[["class", "function", "thread", "start", "end", "success", "command"]])
-    print("--------")
-    df_grouped, k = one_log.read_log_file()
-    print(df_grouped)
-    print(k)

@@ -103,18 +103,3 @@ class GatkPreProcessing(object):
         return gatk_files
 
 
-if __name__ == "__main__":
-    os.chdir("/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_40/Bowtie2/PreProcess")
-    print(os.getcwd())
-    after_markdpl_file = glob.glob("MDUP_*.bam")
-    print(after_markdpl_file)
-    gatk_file_list = []
-    for file in after_markdpl_file:
-        gatk_pre_processing_step = GatkPreProcessing(
-            working_directory="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_40",
-            map_type="Bowtie2", sample_type="Germline", library_matching_id="1", thrds="7")
-
-        return_files = gatk_pre_processing_step.run_gatks3(file)
-        print(return_files)
-        gatk_file_list.append(return_files)
-        print(gatk_file_list)

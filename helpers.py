@@ -77,6 +77,7 @@ def get_info(sample_type, fastq_list, trimmed=False):
 
 
 def create_folder(working_directory, all_files, map_type=None, step="Other", folder_directory=None):
+    all_files_set = set(all_files)
     if step == "Mapping":
         all_files.append("log_file.txt")
         mk_dir = folder_directory + "/" + step
@@ -100,10 +101,10 @@ def create_folder(working_directory, all_files, map_type=None, step="Other", fol
         for file in all_files:
             shutil.move(working_directory + "/" + file, mk_dir + "/" + file)
     else:
-        all_files.append("log_file.txt")
+        all_files_set.add("log_file.txt")
         mk_dir = folder_directory + "/" + step
         os.mkdir(mk_dir)
-        for file in all_files:
+        for file in all_files_set:
             if file[-2:] != "gz":
                 print("preprocess crate folder print " + file)
                 shutil.move(working_directory + "/" + file, mk_dir + "/" + file)

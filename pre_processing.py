@@ -149,17 +149,3 @@ class PreProcessing(object):
                                   folder_directory=self.folder_directory)
             return mark_duplicate_file
 
-
-if __name__ == "__main__":
-    pre_processing_step = PreProcessing(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files",
-                           map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="1", issplitchr="Before")
-
-    mapping_step = mapping.Mapping(working_directory=pre_processing_step.main_directory,
-        map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="3")
-
-    fastq_list = mapping_step.get_fastq()
-    info_dict = mapping_step.get_info(fastq_list)
-    os.chdir(pre_processing_step.working_directory)
-    bam_files = glob.glob("SortedBAM*.bam")
-    mark_duplicate_file = pre_processing_step.pre_process(info_dict, bam_files)
-    print(mark_duplicate_file)

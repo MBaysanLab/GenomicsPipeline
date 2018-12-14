@@ -58,8 +58,3 @@ class QC(object):
         self.qc_trim()
         helpers.create_folder(self.working_directory, self.file_list, step="QC", map_type=self.map_type)
 
-
-if __name__ == "__main__":
-    qc_step = QC(working_directory="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_37/asd",
-                          sample_type="Tumor", thread="4")
-    qc_step.run_qc()

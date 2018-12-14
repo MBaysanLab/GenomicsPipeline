@@ -191,9 +191,3 @@ class Mapping(object):
         indexed = helpers.create_index("SortedBAM_" + sort_gene_origin, "Create Index", self.threads, "Mapping")
         self.file_list.append(indexed)
 
-
-if __name__ == "__main__":
-    mapping_step = Mapping(working_directory="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_38",
-                           map_type="Bowtie2", sample_type="Tumor", library_matching_id="11111", thrds="4", trim="Yes")
-    mapping_files = mapping_step.mapping()
-    print(mapping_files)

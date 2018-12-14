@@ -51,9 +51,9 @@ class VariantCall(object):
         os.chdir(self.working_directory)
         print(self.working_directory)
         self.v_caller = variant_caller
-        self.output_name = self.v_caller + "_" + sample_name
-        self.threads = str(thrds)
         self.map_type = map_type
+        self.output_name = self.map_type + "_" + self.v_caller + "_" + sample_name
+        self.threads = str(thrds)
         self.ref_dir = self.get_paths.ref_dir + "hg19_bundle/ucsc.hg19.fasta"   # contains reference files
         self.tumor_bam = tumor_bam
         self.germline_bam = germline_bam
@@ -121,7 +121,7 @@ class VariantCall(object):
         # "helpers.get_sample_name" function get sample names which is inside read group of bam file
         normal_s_name = helpers.get_sample_name(self.germline_bam)
         tumor_s_name = helpers.get_sample_name(self.tumor_bam)
-
+        print(tumor_s_name)
         # Prepare the mutect variant caller command
         command = self.get_paths.gatk4_path + " Mutect2 " + " -R " + self.ref_dir + " -I " + self.tumor_bam + " -tumor "\
                   + tumor_s_name + " -I " + self.germline_bam + " -normal " + normal_s_name + " -O " + mutect_output
@@ -146,7 +146,7 @@ class VariantCall(object):
         self.mutect_select_variant_other(mutect_output)
 
     def mutect_select_variant_snp(self, mutect_output):
-        snp_output = "SNP_" + mutect_output
+        snp_output = "SNP_" + mutect_output.split("/")[-1]
         command = self.get_paths.gatk4_path + " SelectVariants -R " + self.ref_dir + " -V " + mutect_output + \
                   " --select-type-to-include SNP -O " + snp_output
         print(command)
@@ -154,7 +154,7 @@ class VariantCall(object):
         print(snp_output)
 
     def mutect_select_variant_indel(self, mutect_output):
-        indel_output = "INDEL_" + mutect_output
+        indel_output = "INDEL_" + mutect_output.split("/")[-1]
         command = self.get_paths.gatk4_path + " SelectVariants -R " + self.ref_dir + " -V " + mutect_output + \
                   " --select-type-to-include INDEL -O " + indel_output
         print(command)
@@ -162,7 +162,7 @@ class VariantCall(object):
         print(indel_output)
 
     def mutect_select_variant_other(self, mutect_output):
-        indel_output = "OTHER_" + mutect_output
+        indel_output = "OTHER_" + mutect_output.split("/")[-1]
         command = self.get_paths.gatk4_path + " SelectVariants -R " + self.ref_dir + " -V " + mutect_output + \
                   " --select-type-to-exclude INDEL --select-type-to-exclude SNP -O " + indel_output
         print(command)
@@ -206,13 +206,3 @@ class VariantCall(object):
         log_command(run_workflow_command, "Strelka Create Workflow", self.threads, "Variant Calling")
 
 
-
-#variant_caller, thrds, map_type, germline_bam, germline_interval, wd, tumor_bam, tumor_interval
-if __name__ == "__main__":
-    mutectvcf = VariantCall(variant_caller="Strelka", thrds=1, map_type="Bwa",
-                            germline_bam="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_40/Bwa/PreProcess/GATK_PRIR_MDUP_Bwa_40_MergedBAM.bam",
-                            wd="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_41/Bwa/PreProcess",
-                            tumor_bam="GATK_PRIR_MDUP_Bwa_41_MergedBAM.bam",
-                            tumor_interval="MDUP_Bwa_41_MergedBAM_realign_target.intervals", sample_name="41",
-                            tumor_only="No")
-    mutectvcf.run_pipeline()

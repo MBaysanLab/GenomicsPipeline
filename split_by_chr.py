@@ -29,17 +29,3 @@ def get_bam_by_chr():
             chr_list[chr_a].append(chr_files)
     return chr_list
 
-#get_list = split_bam_by_chr("test_files/NB17_last_Bwa.bam")
-
-# os.chdir("/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files/Bwa/PreProcess")
-# get_list = get_bam_by_chr()
-# print(get_list)
-# #get_paths = GetPaths()
-# # for a in get_list:
-# #     for b in get_list[a]:
-# #         indexcol = "java -jar " + get_paths.picard_path + " BuildBamIndex I=" + b
-# #         log_command(indexcol, "Mapping", "3")
-#
-# for a in get_list:
-#     asd = [b for b in get_list[a] if "MDUP" in b]
-#     print(asd)
