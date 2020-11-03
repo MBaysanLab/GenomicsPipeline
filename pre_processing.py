@@ -1,11 +1,8 @@
 import os
-import glob
-from log_command import log_command
+from utils.log_command import log_command
 from paths import GetPaths
-import mapping
-import helpers
+from utils import helpers
 from split_by_chr import split_bam_by_chr, get_bam_by_chr
-import shutil
 
 
 class PreProcessing(object):
@@ -89,6 +86,19 @@ class PreProcessing(object):
             self.file_list.append("marked_dup_metrics.txt")
             return output
 
+    def novoalign_sort_markduplicate(self, info_dict, all_bam_files):
+        ouput_name = "MDUP_" + self.map_type + "_" + info_dict["Sample_ID"][0] + "_MergedBAM.bam"
+        inputs_list = ""
+        for a in all_bam_files:
+            inputs_list += " " + a
+
+        commands = self.get_paths.novoalign +"novosort  -m 16g -t . -c "+ self.threads +" " + inputs_list +" -i -o " + ouput_name
+        log_command(commands, "Merge&Mark Duplicate", self.threads, "PreProcessing")
+        self.file_list.append(ouput_name)
+        self.file_list.append(ouput_name + ".bai")
+
+        return ouput_name
+
     def pre_process(self, info_dict, all_bam_files):
         if self.split_chr == "After":
             merged_file = self.merge_bams(info_dict, all_bam_files)
@@ -128,12 +138,19 @@ class PreProcessing(object):
                                      "Pre Processing")
                 self.file_list.append(indexed)
                 helpers.create_folder(self.working_directory, self.file_list, map_type=self.map_type, step="PreProcess",
-                                   folder_directory=self.folder_directory)
+                                      folder_directory=self.folder_directory)
             return_files = [a for a in self.file_list if "MDUP" in a and "bam" in a]
             return return_files
 
         # self.split_chr == "No":
         else:
+            if self.map_type == "Novoalign":
+                mark_duplicate_file = self.novoalign_sort_markduplicate(info_dict, all_bam_files)
+                #self.file_list.append(indexed)
+                helpers.create_folder(self.working_directory, self.file_list, map_type=self.map_type, step="PreProcess",
+                                      folder_directory=self.folder_directory)
+                return mark_duplicate_file
+
             merged_file = self.merge_bams(info_dict, all_bam_files)
             indexed = helpers.create_index(merged_file, "Create Index by Merge", self.threads, "Pre Processing")
             self.file_list.append(merged_file)
@@ -149,3 +166,17 @@ class PreProcessing(object):
                                   folder_directory=self.folder_directory)
             return mark_duplicate_file
 
+
+# if __name__ == "__main__":
+#     pre_processing_step = PreProcessing(working_directory="/home/bioinformaticslab/Desktop/GitHub_Repos/Genomics_Pipeline_Test/test_files",
+#                            map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="1", issplitchr="Before")
+#
+#     mapping_step = mapping.Mapping(working_directory=pre_processing_step.main_directory,
+#         map_type="Bwa", sample_type="Tumor", library_matching_id="203", thrds="3")
+#
+#     fastq_list = mapping_step.get_fastq()
+#     info_dict = mapping_step.get_info(fastq_list)
+#     os.chdir(pre_processing_step.working_directory)
+#     bam_files = glob.glob("SortedBAM*.bam")
+#     mark_duplicate_file = pre_processing_step.pre_process(info_dict, bam_files)
+#     print(mark_duplicate_file)

@@ -1,8 +1,4 @@
-import os
-import glob
-from log_command import log_command
 from paths import GetPaths
-import shutil
 
 
 class PonCreation(object):

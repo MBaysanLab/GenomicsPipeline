@@ -1,8 +1,8 @@
 import os
 import glob
-from log_command import log_command
+from utils.log_command import log_command
 from paths import GetPaths
-import helpers
+from utils import helpers
 
 
 class VariantCall(object):
@@ -54,7 +54,7 @@ class VariantCall(object):
         self.map_type = map_type
         self.output_name = self.map_type + "_" + self.v_caller + "_" + sample_name
         self.threads = str(thrds)
-        self.ref_dir = self.get_paths.ref_dir + "hg19_bundle/ucsc.hg19.fasta"   # contains reference files
+        self.ref_dir = self.get_paths.ref_dir + "Homo_sapiens_assembly38.fasta"   # contains reference files
         self.tumor_bam = tumor_bam
         self.germline_bam = germline_bam
         if tumor_only == "Yes":
@@ -99,8 +99,27 @@ class VariantCall(object):
                                       folder_directory=self.folder_directory)
                 return self.folder_directory + "/" + "Mutect2_GATK3"
 
+            elif self.v_caller == "Haplotype":
+                self.gatk_haplotype()
+                files = glob.glob("*.vcf*")
+                helpers.create_folder(self.working_directory, files, map_type=self.map_type, step="Haplotype",
+                                      folder_directory=self.folder_directory)
+                return self.folder_directory + "/" + "Haplotype"
+
             elif self.v_caller == "Strelka":
                 self.strelka_caller()
+                helpers.create_strelka_folder(self.folder_directory, self.output_name)
+
+                return self.folder_directory + "/" + "Strelka"
+
+            elif self.v_caller == "SomaticSniper":
+                self.somaticsniper_caller()
+                files = glob.glob("*.vcf*")
+                helpers.create_folder(self.working_directory, files, map_type=self.map_type, step="SomaticSniper",
+                                      folder_directory=self.folder_directory)
+
+                return self.folder_directory + "/" + "SomaticSniper"
+
             else:
                 return False
         return False
@@ -200,9 +219,34 @@ class VariantCall(object):
 
     def strelka_caller(self):
         command = self.get_paths.strelka + " --normalBam " + self.germline_bam + " --tumorBam " + self.tumor_bam + \
-                  " --referenceFasta " + self.ref_dir + " --runDir " + self.working_directory
+                  " --referenceFasta " + self.ref_dir + " --runDir " + self.working_directory + " --exome --disableEVS"
         log_command(command, "Strelka Create Workflow", self.threads, "Variant Calling")
-        run_workflow_command = "python runWorkflow.py -m local -j " + self.threads
+        run_workflow_command = "python2 runWorkflow.py -m local -j " + self.threads
         log_command(run_workflow_command, "Strelka Create Workflow", self.threads, "Variant Calling")
 
+    def gatk_haplotype(self):
+        haplotype_output = self.working_directory + "/" + self.output_name + ".vcf"
+        command = "java -jar " + self.get_paths.gatk_path + " -R " + self.ref_dir + " -T HaplotypeCaller -I " + \
+                  self.germline_bam + " --dbsnp " + self.get_paths.dbsnp + \
+                  " -o " + haplotype_output + ".raw.snps.indels.vcf"
+        print(command)
+        log_command(command, "Haplotype", self.threads, "Haplotype Variant Calling")
 
+    def somaticsniper_caller(self):
+        somaticsniper_output = self.working_directory + "/" + self.output_name + ".vcf"
+        command = self.get_paths.somaticsniper + " -q 1 -L -G -Q 15 -s 0.01 -T 0.85 -N 2 -r 0.001 -n NORMAL -t TUMOR " \
+                                                 "-F vcf -f  " + self.ref_dir + "  " + self.tumor_bam + "  " + \
+                  self.germline_bam + " " + somaticsniper_output
+
+        log_command(command, "Somatic Sniper", self.threads, "Variant Calling")
+
+
+#variant_caller, thrds, map_type, germline_bam, germline_interval, wd, tumor_bam, tumor_interval
+# if __name__ == "__main__":
+#     mutectvcf = VariantCall(variant_caller="Strelka", thrds=1, map_type="Bwa",
+#                             germline_bam="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_40/Bwa/PreProcess/GATK_PRIR_MDUP_Bwa_40_MergedBAM.bam",
+#                             wd="/home/bioinformaticslab/Desktop/AMBRY/DUYGU_1/Sample_41/Bwa/PreProcess",
+#                             tumor_bam="GATK_PRIR_MDUP_Bwa_41_MergedBAM.bam",
+#                             tumor_interval="MDUP_Bwa_41_MergedBAM_realign_target.intervals", sample_name="41",
+#                             tumor_only="No")
+#     mutectvcf.run_pipeline()
