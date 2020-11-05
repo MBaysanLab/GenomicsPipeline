@@ -1,10 +1,11 @@
-import os
 import glob
-from log_command import log_command
-from paths import GetPaths
+import os
 import shutil
 import subprocess
 import tempfile
+
+from log_command import log_command
+from paths import GetPaths
 
 
 def get_fastq():
@@ -18,7 +19,9 @@ def get_fastq():
     """
 
     all_fastq_files = glob.glob("*fastq.gz")
-    split_names_v = [os.path.splitext(os.path.splitext(i)[0])[0] for i in all_fastq_files]
+    split_names_v = [
+        os.path.splitext(os.path.splitext(i)[0])[0] for i in all_fastq_files
+    ]
     return split_names_v
 
 
@@ -32,7 +35,9 @@ def get_info(sample_type, fastq_list, trimmed=False):
     dict
         list of unique information inside dictionary
     """
-    sample_id, germline_dna, index_seq, lanes, pairs_r, n_of_seq = (set() for i in range(6))
+    sample_id, germline_dna, index_seq, lanes, pairs_r, n_of_seq = (
+        set() for i in range(6)
+    )
     if sample_type == "Tumor":
         for i in fastq_list:
             if trimmed:
@@ -48,8 +53,13 @@ def get_info(sample_type, fastq_list, trimmed=False):
                 pairs_r.add(i.split("_")[3])
                 n_of_seq.add(i.split("_")[4])
 
-        list_with_info = {"Sample_ID": list(sample_id), "Index": list(index_seq), "Lanes": list(lanes),
-                          "Pairs": list(pairs_r), "Number_of_seq": list(n_of_seq)}
+        list_with_info = {
+            "Sample_ID": list(sample_id),
+            "Index": list(index_seq),
+            "Lanes": list(lanes),
+            "Pairs": list(pairs_r),
+            "Number_of_seq": list(n_of_seq),
+        }
         return list_with_info
     elif sample_type == "Germline" or sample_type == "Normal":
 
@@ -69,14 +79,22 @@ def get_info(sample_type, fastq_list, trimmed=False):
                 pairs_r.add(i.split("_")[4])
                 n_of_seq.add(i.split("_")[5])
 
-        list_with_info = {"Sample_ID": list(sample_id), "Germline": list(germline_dna), "Index": list(index_seq),
-                          "Lanes": list(lanes), "Pairs": list(pairs_r), "Number_of_seq": list(n_of_seq)}
+        list_with_info = {
+            "Sample_ID": list(sample_id),
+            "Germline": list(germline_dna),
+            "Index": list(index_seq),
+            "Lanes": list(lanes),
+            "Pairs": list(pairs_r),
+            "Number_of_seq": list(n_of_seq),
+        }
         return list_with_info
     else:
         print("raise error and ask again for a valid sample type")
 
 
-def create_folder(working_directory, all_files, map_type=None, step="Other", folder_directory=None):
+def create_folder(
+    working_directory, all_files, map_type=None, step="Other", folder_directory=None
+):
     all_files_set = set(all_files)
     if step == "Mapping":
         all_files.append("log_file.txt")

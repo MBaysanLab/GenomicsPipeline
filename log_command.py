@@ -1,12 +1,20 @@
-from datetime import datetime
 import os
+from datetime import datetime
+
 
 class log_command(object):
     def __init__(self, command, from_function, th, function_class):
         self.command = command
         self.from_function = from_function
         self.th = th
-        self.logs = {'function': "", 'command': "", 'start_time': "", 'end_time': "", 'threads': "", 'success': 0}
+        self.logs = {
+            "function": "",
+            "command": "",
+            "start_time": "",
+            "end_time": "",
+            "threads": "",
+            "success": 0,
+        }
         self.f_class = function_class
         self.log = ""
         self.system_command_send()
@@ -29,8 +37,10 @@ class log_command(object):
             self.log += "failed,"
             self.log += self.command + "\n"
             self.write_logs(self.log)
-            return self.from_function + " give error with this command -> " + self.command
+            return (
+                self.from_function + " give error with this command -> " + self.command
+            )
 
     def write_logs(self, log):
-        with open('log_file.txt', 'a') as file:
+        with open("log_file.txt", "a") as file:
             file.write(log)

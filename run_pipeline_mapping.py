@@ -1,13 +1,24 @@
-import mapping
-import pre_processing
-import gatk_pre_processing
-import qc_trim
-from utils import helpers
 import os
 
+from utils import helpers
 
-def callmapping(var_maptype, var_sampletype, working_directory, library, threads, var_gatk_tools, issplitchr, trim,
-                middle_files="Yes"):
+import gatk_pre_processing
+import mapping
+import pre_processing
+import qc_trim
+
+
+def callmapping(
+    var_maptype,
+    var_sampletype,
+    working_directory,
+    library,
+    threads,
+    var_gatk_tools,
+    issplitchr,
+    trim,
+    middle_files="Yes",
+):
     mt = var_maptype
     if middle_files == "Yes":
         mdf_keep = True
@@ -32,24 +43,34 @@ def callmapping(var_maptype, var_sampletype, working_directory, library, threads
             qc = qc_trim.QC(wd, st, th, fastq_list, info_dict, mt)
             qc.run_qc()
     else:
-        if os.path.exists(wd+"/QC"):
+        if os.path.exists(wd + "/QC"):
             tr = "Yes"
 
-
-    mapping_step = mapping.Mapping(working_directory=wd, map_type=mt, sample_type=st, library_matching_id=lb,
-                                   thrds=th, trim=tr)
+    mapping_step = mapping.Mapping(
+        working_directory=wd,
+        map_type=mt,
+        sample_type=st,
+        library_matching_id=lb,
+        thrds=th,
+        trim=tr,
+    )
 
     mapping_files = mapping_step.mapping()
-    #mapping_files = ["SortedBAM_Bwa_NOB01_AACGTGA_L001_001.bam"]
+    # mapping_files = ["SortedBAM_Bwa_NOB01_AACGTGA_L001_001.bam"]
 
     if not mdf_keep:
         helpers.delete_files_from_folder(wd, mt, "Mapping", mapping_files)
 
-
     print("---------------------------")
     print(mapping_files)
-    pre_processing_step = pre_processing.PreProcessing(working_directory=wd, map_type=mt, sample_type=st,
-                                                       library_matching_id=lb, thrds=th, issplitchr=sc)
+    pre_processing_step = pre_processing.PreProcessing(
+        working_directory=wd,
+        map_type=mt,
+        sample_type=st,
+        library_matching_id=lb,
+        thrds=th,
+        issplitchr=sc,
+    )
 
     print("---------------------------")
     print(fastq_list)
@@ -57,21 +78,33 @@ def callmapping(var_maptype, var_sampletype, working_directory, library, threads
     gatk_file_list = []
     if gt == "Yes":
         if issplitchr != "No":
-            mark_duplicate_file = pre_processing_step.pre_process(info_dict, mapping_files)
+            mark_duplicate_file = pre_processing_step.pre_process(
+                info_dict, mapping_files
+            )
             for file in mark_duplicate_file:
-                gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(working_directory=wd, map_type=mt,
-                                                                                 sample_type=st, library_matching_id=lb,
-                                                                                 thrds=th)
+                gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(
+                    working_directory=wd,
+                    map_type=mt,
+                    sample_type=st,
+                    library_matching_id=lb,
+                    thrds=th,
+                )
                 return_files = gatk_pre_processing_step.run_gatks4(file)
                 print(return_files)
                 gatk_file_list.append(return_files)
                 print(gatk_file_list)
 
         else:
-            mark_duplicate_file = pre_processing_step.pre_process(info_dict, mapping_files)
-            gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(working_directory=wd, map_type=mt,
-                                                                             sample_type=st, library_matching_id=lb,
-                                                                             thrds=th)
+            mark_duplicate_file = pre_processing_step.pre_process(
+                info_dict, mapping_files
+            )
+            gatk_pre_processing_step = gatk_pre_processing.GatkPreProcessing(
+                working_directory=wd,
+                map_type=mt,
+                sample_type=st,
+                library_matching_id=lb,
+                thrds=th,
+            )
             gatk_files = gatk_pre_processing_step.run_gatks4(mark_duplicate_file)
 
             if not mdf_keep:
@@ -85,8 +118,14 @@ def callmapping(var_maptype, var_sampletype, working_directory, library, threads
 
 
 if __name__ == "__main__":
-    callmapping(working_directory="/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/yunusemrecebeci/samples/Sample_NOB74",
-                var_maptype="Bwa", var_sampletype="Tumor", library="1", threads="4", var_gatk_tools="Yes",
-                issplitchr="No", trim="Yes", middle_files="No")
-
-
+    callmapping(
+        working_directory="/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/yunusemrecebeci/samples/Sample_NOB74",
+        var_maptype="Bwa",
+        var_sampletype="Tumor",
+        library="1",
+        threads="4",
+        var_gatk_tools="Yes",
+        issplitchr="No",
+        trim="Yes",
+        middle_files="No",
+    )

@@ -1,14 +1,24 @@
-import os
 import glob
-from utils.log_command import log_command
-from paths import GetPaths
-from utils import helpers
+import os
+
 import pandas as pd
+from utils import helpers
+from utils.log_command import log_command
+
+from paths import GetPaths
 
 
 class VariantAnnotation(object):
-
-    def __init__(self, variant_annotater, wd, sample_name, thread_v, will_annotate, annotate_all, ref_given="hg38"):
+    def __init__(
+        self,
+        variant_annotater,
+        wd,
+        sample_name,
+        thread_v,
+        will_annotate,
+        annotate_all,
+        ref_given="hg38",
+    ):
         self.get_paths = GetPaths(ref=ref_given)
         self.working_directory = wd
         os.chdir(self.working_directory)
@@ -33,7 +43,6 @@ class VariantAnnotation(object):
         elif self.v_annotater == "Annovarg37":
             self.annovar_for_g37(self.annotate_files)
 
-
     def annovar_vcf_files(self, input_fs):
         print(input_fs)
         if type(input_fs) == list:
@@ -41,19 +50,31 @@ class VariantAnnotation(object):
                 input_file = self.working_directory + "/" + input_f
                 output_f = "Annovar_" + "_".join(input_f.split(".")[:-1])
                 output_file = self.working_directory + "/" + output_f
-                command = self.annovar_dir + " --vcfinput " + input_file + " " + self.humandb + \
-                          " -buildver hg38 -out " + output_file + " -remove -protocol refGene,ensGene,knownGene," \
-                                                                 "cytoBand" \
-                                                                  ",exac03,avsnp150,dbnsfp35a,gme,gnomad_exome," \
-                                                                  "clinvar_20190305,cosmic89_coding,nci60,intervar_20180118 -operation " \
-                                                                  "gx,gx,gx,r,f,f,f,f,f,f,f,f,f -nastring . -polish " \
-                                                                  "-xreffile " + self.xref
+                command = (
+                    self.annovar_dir
+                    + " --vcfinput "
+                    + input_file
+                    + " "
+                    + self.humandb
+                    + " -buildver hg38 -out "
+                    + output_file
+                    + " -remove -protocol refGene,ensGene,knownGene,"
+                    "cytoBand"
+                    ",exac03,avsnp150,dbnsfp35a,gme,gnomad_exome,"
+                    "clinvar_20190305,cosmic89_coding,nci60,intervar_20180118 -operation "
+                    "gx,gx,gx,r,f,f,f,f,f,f,f,f,f -nastring . -polish "
+                    "-xreffile " + self.xref
+                )
                 print(command)
                 log_command(command, "Annovar", self.threads, "Variant Annotation")
                 output_fs = glob.glob("*" + output_f + "*")
                 self.file_list.extend(output_fs)
-            helpers.create_folder(self.working_directory, self.file_list, step="Annovar",
-                                  folder_directory=self.working_directory)
+            helpers.create_folder(
+                self.working_directory,
+                self.file_list,
+                step="Annovar",
+                folder_directory=self.working_directory,
+            )
         else:
             return False
 
@@ -64,19 +85,31 @@ class VariantAnnotation(object):
                 input_file = self.working_directory + "/" + input_f
                 output_f = "Annovar_" + "_".join(input_f.split(".")[:-1])
                 output_file = self.working_directory + "/" + output_f
-                command = self.annovar_dir + " --vcfinput " + input_file + " " + self.humandb + \
-                          " -buildver hg19 -out " + output_file + " -remove -protocol refGene," \
-                                                                  "cytoBand" \
-                                                                  ",exac03,gnomad211_exome,avsnp150,dbnsfp35a," \
-                                                                  "clinvar_20190305,intervar_20180118 -operation " \
-                                                                  "gx,r,f,f,f,f,f,f -nastring . -polish " \
-                                                                  "-xreffile " + self.xref
+                command = (
+                    self.annovar_dir
+                    + " --vcfinput "
+                    + input_file
+                    + " "
+                    + self.humandb
+                    + " -buildver hg19 -out "
+                    + output_file
+                    + " -remove -protocol refGene,"
+                    "cytoBand"
+                    ",exac03,gnomad211_exome,avsnp150,dbnsfp35a,"
+                    "clinvar_20190305,intervar_20180118 -operation "
+                    "gx,r,f,f,f,f,f,f -nastring . -polish "
+                    "-xreffile " + self.xref
+                )
                 print(command)
                 log_command(command, "Annovar", self.threads, "Variant Annotation")
                 output_fs = glob.glob("*" + output_f + "*")
                 self.file_list.extend(output_fs)
-            helpers.create_folder(self.working_directory, self.file_list, step="Annovar",
-                                  folder_directory=self.working_directory)
+            helpers.create_folder(
+                self.working_directory,
+                self.file_list,
+                step="Annovar",
+                folder_directory=self.working_directory,
+            )
         else:
             return False
 
@@ -88,24 +121,40 @@ class VariantAnnotation(object):
                 header_f = input_f.replace("Strelka", "Strelka2")
                 header_f1 = header_f.replace(".vcf", ".txt")
                 header_output_file = self.working_directory + "/" + header_f1
-                header_remove_comand = 'grep -v "##" ' + input_file + " | awk '" + '{print $1"\\t"$2"\\t"$2"\\t"$4"\\t"$5"\\t"$6"\\t"$7"\\t"$8"\\t"$9"\\t"$10"\\t"$11}' + "' > {}".format(header_output_file)
+                header_remove_comand = (
+                    'grep -v "##" '
+                    + input_file
+                    + " | awk '"
+                    + '{print $1"\\t"$2"\\t"$2"\\t"$4"\\t"$5"\\t"$6"\\t"$7"\\t"$8"\\t"$9"\\t"$10"\\t"$11}'
+                    + "' > {}".format(header_output_file)
+                )
                 print(header_remove_comand)
-                log_command(header_remove_comand, "Annovar", self.threads, "Variant Annotation Preprocess")
+                log_command(
+                    header_remove_comand,
+                    "Annovar",
+                    self.threads,
+                    "Variant Annotation Preprocess",
+                )
                 output_f = "Annovar_" + "_".join(header_f.split(".")[:-1])
                 output_file = self.working_directory + "/" + output_f
-                command = self.annovar_dir + " " + input_file + " " + self.humandb + \
-                          " -buildver hg38 -out " + output_file + " -remove -protocol refGene,ensGene,knownGene," \
-                                                                  "cytoBand" \
-                                                                  ",exac03,avsnp150,dbnsfp35c,gme,gnomad_exome," \
-                                                                  "clinvar_20180603,cosmic -operation " \
-                                                                  "gx,gx,gx,r,f,f,f,f,f,f,f -nastring . -polish " \
-                                                                  "-xreffile " + self.xref
+                command = (
+                    self.annovar_dir
+                    + " "
+                    + input_file
+                    + " "
+                    + self.humandb
+                    + " -buildver hg38 -out "
+                    + output_file
+                    + " -remove -protocol refGene,ensGene,knownGene,"
+                    "cytoBand"
+                    ",exac03,avsnp150,dbnsfp35c,gme,gnomad_exome,"
+                    "clinvar_20180603,cosmic -operation "
+                    "gx,gx,gx,r,f,f,f,f,f,f,f -nastring . -polish "
+                    "-xreffile " + self.xref
+                )
                 print(command)
 
-
-
                 output_fs = glob.glob("*" + output_f + "*")
-
 
 
 def annovar_custom_txt(txt_file, vcf_file):
@@ -135,13 +184,12 @@ def annovar_custom_txt(txt_file, vcf_file):
     df.to_csv(output_file_name)
 
 
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #    annotate = VariantAnnotation(variant_annotater="Strelka", thread_v=4,
 #                            wd="/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/AMBRY/203/Sample_NOB02/Bwa/Strelka",
 #                            sample_name="NOB02", will_annotate=[""], annotate_all=True)
 #
 #    annotate.run_annotation()
-
 
 
 # if __name__ == "__main__":
@@ -152,14 +200,20 @@ def annovar_custom_txt(txt_file, vcf_file):
 #     annotate.run_annotation()
 
 if __name__ == "__main__":
-   annotate = VariantAnnotation(variant_annotater="Annovar", thread_v=6,
-                           wd="/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Documents/tree_deneme/t_analysis/germlines",
-                           sample_name="hasta12347", will_annotate=["germlimes_master.vcf"], annotate_all=False, ref_given="hg38")
+    annotate = VariantAnnotation(
+        variant_annotater="Annovar",
+        thread_v=6,
+        wd="/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Documents/tree_deneme/t_analysis/germlines",
+        sample_name="hasta12347",
+        will_annotate=["germlimes_master.vcf"],
+        annotate_all=False,
+        ref_given="hg38",
+    )
 
-   annotate.run_annotation()
+    annotate.run_annotation()
 
 
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #    annotate = VariantAnnotation(variant_annotater="Annovarg37", thread_v=8,
 #                            wd="/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/FBM/FBM_Aile/",
 #                            sample_name="FBM", will_annotate=["FBM_all_mutect2.vcf"], annotate_all=False)

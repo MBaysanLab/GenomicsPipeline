@@ -1,4 +1,3 @@
-
 class GetPaths(object):
     def __init__(self, ref="hg38"):
 
@@ -15,8 +14,10 @@ class GetPaths(object):
         if ref == "hg38":
             self.ref_dir = "/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/ref_genome_indexes/hg38_bundle/"
             self.dbsnp = "//media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/ref_genome_indexes/hg38_bundle/dbsnp_146.hg38.vcf.gz"
-            self.mills_indel = "/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/ref_genome_indexes/hg38_bundle" \
-                           "/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
+            self.mills_indel = (
+                "/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/ref_genome_indexes/hg38_bundle"
+                "/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
+            )
             self.cosmic = "/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/ref_genome_indexes/hg19_bundle/cosmic_hg19_lifted_over.vcf"
             self.annovar = "/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/annovar/"
             self.annovar_db = "/media/bioinformaticslab/369ca485-b3f2-4f04-bbfb-8657aad7669e/bioinformaticslab/Desktop/GenomicsWorks/annovar/humandb_38/"

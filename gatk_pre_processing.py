@@ -1,13 +1,16 @@
-import os
 import glob
-from utils.log_command import log_command
-from paths import GetPaths
+import os
+
 from utils import helpers
+from utils.log_command import log_command
+
+from paths import GetPaths
 
 
 class GatkPreProcessing(object):
-
-    def __init__(self, working_directory, map_type, sample_type, library_matching_id, thrds):
+    def __init__(
+        self, working_directory, map_type, sample_type, library_matching_id, thrds
+    ):
         self.get_paths = GetPaths()
         self.main_directory = working_directory
         self.folder_directory = working_directory + "/" + map_type
@@ -23,10 +26,20 @@ class GatkPreProcessing(object):
 
     def gatk3_realign_target_creator(self, lastbam):
         realign_target = str(lastbam).split(".")[0] + "_realign_target.intervals"
-        bcal = "java -jar " + self.get_paths.gatk_path + " -T RealignerTargetCreator -nt " + \
-               self.threads + " -R " + self.bundle_dir + "/ucsc.hg19.fasta -known " + \
-               self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf -I " + lastbam + \
-               " -o " + realign_target
+        bcal = (
+            "java -jar "
+            + self.get_paths.gatk_path
+            + " -T RealignerTargetCreator -nt "
+            + self.threads
+            + " -R "
+            + self.bundle_dir
+            + "/ucsc.hg19.fasta -known "
+            + self.bundle_dir
+            + "/Mills_and_1000G_gold_standard.indels.hg19.vcf -I "
+            + lastbam
+            + " -o "
+            + realign_target
+        )
         print(bcal)
         log_command(bcal, "Realign Target Creator", self.threads, "GatkPreProcessing")
         self.file_list.append(realign_target)
@@ -35,10 +48,21 @@ class GatkPreProcessing(object):
     def gatk3_indel_realigner(self, lastbam, realign_target):
 
         realigned_last_bam = "IR_" + lastbam
-        bcal = "java -jar " + self.get_paths.gatk_path + " -T IndelRealigner -R " + self.bundle_dir + \
-               "/ucsc.hg19.fasta -known " + self.bundle_dir + "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + \
-               " -targetIntervals " + realign_target + " --noOriginalAlignmentTags -I " + lastbam + " -o " + \
-               realigned_last_bam
+        bcal = (
+            "java -jar "
+            + self.get_paths.gatk_path
+            + " -T IndelRealigner -R "
+            + self.bundle_dir
+            + "/ucsc.hg19.fasta -known "
+            + self.bundle_dir
+            + "/Mills_and_1000G_gold_standard.indels.hg19.vcf"
+            + " -targetIntervals "
+            + realign_target
+            + " --noOriginalAlignmentTags -I "
+            + lastbam
+            + " -o "
+            + realigned_last_bam
+        )
 
         log_command(bcal, "Indel Realigner", self.threads, "GatkPreProcessing")
         self.file_list.append(realigned_last_bam)
@@ -47,45 +71,94 @@ class GatkPreProcessing(object):
     def gatk3_base_recalibrator(self, lastbam):
         basequalityscore = str(lastbam).split(".")[0] + "_bqsr.grp"
         nct = " -nct " + str(self.threads)
-        bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T BaseRecalibrator -R " + self.bundle_dir +\
-               "/ucsc.hg19.fasta -I " + lastbam + " -knownSites " + self.bundle_dir +\
-               "/Mills_and_1000G_gold_standard.indels.hg19.vcf" + " -o " + basequalityscore
+        bcal = (
+            "java -jar "
+            + self.get_paths.gatk_path
+            + nct
+            + " -T BaseRecalibrator -R "
+            + self.bundle_dir
+            + "/ucsc.hg19.fasta -I "
+            + lastbam
+            + " -knownSites "
+            + self.bundle_dir
+            + "/Mills_and_1000G_gold_standard.indels.hg19.vcf"
+            + " -o "
+            + basequalityscore
+        )
         log_command(bcal, "Base Recalibrator", self.threads, "GatkPreProcessing")
         self.file_list.append(basequalityscore)
         return basequalityscore
-
 
     def gatk3_print_reads(self, lastbam, bqsr):
         nct = " -nct " + str(self.threads)
 
         aftercalibratorBam = "GATK_PR" + lastbam
-        bcal = "java -jar " + self.get_paths.gatk_path + nct + " -T PrintReads -R " + self.bundle_dir + \
-               "/ucsc.hg19.fasta -I " + lastbam + " --BQSR " + bqsr + " -o " + aftercalibratorBam
+        bcal = (
+            "java -jar "
+            + self.get_paths.gatk_path
+            + nct
+            + " -T PrintReads -R "
+            + self.bundle_dir
+            + "/ucsc.hg19.fasta -I "
+            + lastbam
+            + " --BQSR "
+            + bqsr
+            + " -o "
+            + aftercalibratorBam
+        )
         log_command(bcal, "Print Reads", self.threads, "GatkPreProcessing")
         self.file_list.append(aftercalibratorBam)
-        indexed = helpers.create_index(aftercalibratorBam, "Create Index by GATK_PrintReads", self.threads,
-                                   "GatkPreProcess")
+        indexed = helpers.create_index(
+            aftercalibratorBam,
+            "Create Index by GATK_PrintReads",
+            self.threads,
+            "GatkPreProcess",
+        )
         self.file_list.append(indexed)
-
 
     def gatk4_base_recalibrator(self, lastbam):
         recal_table = str(lastbam).split(".")[0] + "_RECAL.table"
 
-        bcal = self.get_paths.gatk4_path + " BaseRecalibrator -R " + self.bundle_dir +\
-               "Homo_sapiens_assembly38.fasta -I " + lastbam + " --known-sites " + self.get_paths.mills_indel +\
-               " --known-sites " + self.get_paths.dbsnp + " --known-sites " + self.get_paths.one_thousand_g + " -O " +\
-               recal_table
+        bcal = (
+            self.get_paths.gatk4_path
+            + " BaseRecalibrator -R "
+            + self.bundle_dir
+            + "Homo_sapiens_assembly38.fasta -I "
+            + lastbam
+            + " --known-sites "
+            + self.get_paths.mills_indel
+            + " --known-sites "
+            + self.get_paths.dbsnp
+            + " --known-sites "
+            + self.get_paths.one_thousand_g
+            + " -O "
+            + recal_table
+        )
         log_command(bcal, "Base Recalibrator", self.threads, "Gatk4PreProcessing")
         self.file_list.append(recal_table)
         return recal_table
 
     def gatk4_applybsqr(self, lastbam, recaltable):
         afterbqsrbam = "GATK4_" + lastbam
-        apply_command = self.get_paths.gatk4_path + " ApplyBQSR -R " + self.bundle_dir + "Homo_sapiens_assembly38.fasta -I " + \
-                        lastbam + " --bqsr-recal-file " + recaltable + " -O " + afterbqsrbam
+        apply_command = (
+            self.get_paths.gatk4_path
+            + " ApplyBQSR -R "
+            + self.bundle_dir
+            + "Homo_sapiens_assembly38.fasta -I "
+            + lastbam
+            + " --bqsr-recal-file "
+            + recaltable
+            + " -O "
+            + afterbqsrbam
+        )
         log_command(apply_command, "ApplyBQSR", self.threads, "Gatk4PreProcessing")
         self.file_list.append(afterbqsrbam)
-        indexed = helpers.create_index(afterbqsrbam, "Create Index by GATK_ApplyBSQR", self.threads, "GatkPreProcess")
+        indexed = helpers.create_index(
+            afterbqsrbam,
+            "Create Index by GATK_ApplyBSQR",
+            self.threads,
+            "GatkPreProcess",
+        )
         self.file_list.append(indexed)
 
     def run_gatks3(self, after_markdpl):
